@@ -161,6 +161,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--lbl);min-height:10
 .selchk{width:24px;height:24px;border-radius:50%;border:2px solid var(--sep);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;font-size:12px;color:#fff;font-weight:700;transition:all .2s;}
 .selchk.on{background:var(--blue);border-color:var(--blue);}
 
+/* QUANTITY CONTROLS */
+.qty-wrap{display:flex;align-items:center;gap:0;margin-left:10px;flex-shrink:0;}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:none;background:var(--sep);color:var(--lbl);font-size:18px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font);}
+.qty-btn:active{opacity:.6;}
+.qty-num{min-width:28px;text-align:center;font-size:16px;font-weight:600;color:var(--lbl);}
+
 /* SHARE MODAL */
 .share-actions{display:flex;flex-direction:column;gap:0;margin:0 16px 10px;border-radius:14px;overflow:hidden;}
 .share-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:none;font-family:var(--font);font-size:17px;color:var(--lbl);cursor:pointer;width:100%;text-align:left;}
@@ -445,7 +451,7 @@ function doShare(){
     const its=listItems.filter(i=>i.cat===cat.id);
     if(!its.length) return;
     lines.push(`\n${cat.icon} ${cat.label}`);
-    its.forEach(i=>lines.push(`  • ${i.name}`));
+    its.forEach(i=>lines.push(`  • ${i.name}${i.qty>1?' ('+i.qty+')':''}`));
   });
   const txt=lines.join("\n");
   closeOv("ov-share");
@@ -494,21 +500,47 @@ function drawList(){
 
 function makeListRow(item){
   const cat=catOf(item.cat);
-  const row=document.createElement("button"); row.className="row";
+  if(!item.qty) item.qty=1;
+  const row=document.createElement("div"); row.className="row"; row.style.cursor="default";
+
   const wrap=document.createElement("div"); wrap.className="sw-wrap";
-  wrap.innerHTML=`<div class="chk"></div><span class="row-lbl">${item.name}</span><div class="dot" style="background:${cat.color}"></div>`;
+
+  // Check button
+  const chk=document.createElement("button"); chk.className="chk";
+  chk.style.cssText="border:none;cursor:pointer;flex-shrink:0;";
+  chk.onclick=e=>{e.stopPropagation();if(row.classList.contains("sw")){closeSwipe();return;}listItems=listItems.filter(i=>i.id!==item.id);save();drawList();};
+
+  const lbl=document.createElement("span"); lbl.className="row-lbl"; lbl.textContent=item.name;
+
+  // Quantity controls
+  const qw=document.createElement("div"); qw.className="qty-wrap";
+  const qm=document.createElement("button"); qm.className="qty-btn"; qm.textContent="−";
+  qm.onclick=e=>{
+    e.stopPropagation();
+    if(row.classList.contains("sw")){closeSwipe();return;}
+    if(item.qty>1){item.qty--;save();qn.textContent=item.qty;}
+    else{listItems=listItems.filter(i=>i.id!==item.id);save();drawList();}
+  };
+  const qn=document.createElement("span"); qn.className="qty-num"; qn.textContent=item.qty;
+  const qp=document.createElement("button"); qp.className="qty-btn"; qp.textContent="+";
+  qp.onclick=e=>{
+    e.stopPropagation();
+    if(row.classList.contains("sw")){closeSwipe();return;}
+    item.qty++; save(); qn.textContent=item.qty;
+  };
+  qw.appendChild(qm); qw.appendChild(qn); qw.appendChild(qp);
+
+  const dot=document.createElement("div"); dot.className="dot"; dot.style.background=cat.color;
+
+  wrap.appendChild(chk); wrap.appendChild(lbl); wrap.appendChild(qw); wrap.appendChild(dot);
   row.appendChild(wrap);
+
   const bDel=document.createElement("button"); bDel.className="sw-del"; bDel.textContent="Remover";
   bDel.onclick=e=>{e.stopPropagation();listItems=listItems.filter(i=>i.id!==item.id);save();closeSwipe();drawList();};
   const bMov=document.createElement("button"); bMov.className="sw-mov"; bMov.textContent="Mover";
   bMov.onclick=e=>{e.stopPropagation();openRecat(item.id,"list");};
   row.appendChild(bDel); row.appendChild(bMov);
-  row.onclick=e=>{
-    if(e.target===bDel||e.target===bMov) return;
-    if(row.classList.contains("sw")){closeSwipe();return;}
-    listItems=listItems.filter(i=>i.id!==item.id);
-    save(); drawList();
-  };
+
   setupSwipe(row);
   return row;
 }
@@ -567,7 +599,7 @@ function doAddToList(){
   pickedIds.forEach(id=>{
     const item=libItems.find(i=>i.id===id);
     if(item&&!listItems.some(l=>l.name===item.name&&l.cat===item.cat)){
-      listItems.push({id:uid(),name:item.name,cat:item.cat});
+      listItems.push({id:uid(),name:item.name,cat:item.cat,qty:1});
       n++;
     }
   });
