@@ -238,6 +238,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--lbl);min-height:10
       <button class="share-btn" onclick="doShare()"><span class="share-ico">↑</span>Partilhar lista</button>
       <button class="share-btn" onclick="doPrint()"><span class="share-ico">🖨️</span>Imprimir lista</button>
       <button class="share-btn" onclick="showInstallHelp()"><span class="share-ico">📱</span>Instalar no iPhone</button>
+      <button class="share-btn" onclick="exportData()"><span class="share-ico">💾</span>Exportar dados (backup)</button>
+      <button class="share-btn" onclick="document.getElementById('import-input').click()"><span class="share-ico">📂</span>Importar dados (restaurar)</button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
     <button class="mbtn gray" onclick="closeOv('ov-share')">Cancelar</button>
   </div>
@@ -750,6 +753,54 @@ function setupSwipe(row){
 }
 function closeSwipe(){if(swRow){swRow.classList.remove("sw");swRow=null;}}
 document.addEventListener("touchstart",e=>{if(swRow&&!swRow.contains(e.target))closeSwipe();},{passive:true});
+
+// ── EXPORT / IMPORT ─────────────────────────────
+function exportData(){
+  const data = {
+    version: 1,
+    date: new Date().toISOString(),
+    cats: cats,
+    libItems: libItems,
+    listItems: listItems,
+    collapsed: collapsed
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "compras-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+  closeOv("ov-share");
+  setTimeout(()=>alert("✅ Backup guardado!\nGuarda o ficheiro em local seguro (iCloud, Email, etc.)"),300);
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.cats || !data.libItems) throw new Error("Ficheiro inválido");
+      if(!confirm("⚠️ Isto vai substituir todos os dados actuais.\nTens a certeza?")) return;
+      cats      = data.cats;
+      libItems  = data.libItems;
+      listItems = data.listItems || [];
+      collapsed = data.collapsed || {};
+      save();
+      closeOv("ov-share");
+      goTab("list");
+      alert("✅ Dados restaurados com sucesso!");
+    } catch(err) {
+      alert("❌ Erro ao importar. Certifica-te que é um ficheiro de backup válido.");
+    }
+  };
+  reader.readAsText(file);
+  // Reset input so same file can be imported again
+  event.target.value = "";
+}
 
 // ── INIT ─────────────────────────────────────────
 drawList();
