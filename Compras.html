@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Compras">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%2334C759'/><text y='.9em' font-size='72' x='50%' text-anchor='middle'>🛒</text></svg>">
+<title>🛒 Compras</title>
+<style>
+/* fontes do sistema — sem dependências externas */
+:root{
+  --sat:env(safe-area-inset-top,50px);
+  --sab:env(safe-area-inset-bottom,30px);
+  --blue:#007AFF;--green:#34C759;--red:#FF3B30;
+  --orange:#FF9500;--purple:#AF52DE;--teal:#5AC8FA;--yellow:#FFCC00;
+  --bg:#F2F2F7;--card:#FFF;--outer-bg:#E5E5EA;--sep:rgba(60,60,67,0.18);
+  --lbl:#000;--lbl2:rgba(60,60,67,0.6);--lbl3:rgba(60,60,67,0.3);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Helvetica,Arial,sans-serif;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#000;--card:#1C1C1E;--sep:rgba(84,84,88,0.65);
+  --lbl:#FFF;--lbl2:rgba(235,235,245,0.6);--lbl3:rgba(235,235,245,0.3);
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:var(--font);background:var(--bg);color:var(--lbl);min-height:100dvh;min-height:100vh;-webkit-font-smoothing:antialiased;overscroll-behavior:none;}
+@media(min-width:500px){
+  body{background:#C7C7CC;}
+  .app-wrap{box-shadow:0 8px 40px rgba(0,0,0,0.25);border-radius:0;}
+  .tabs{border-radius:0;}
+}
+@media(prefers-color-scheme:dark){
+  @media(min-width:500px){ body{background:#1C1C1E;} }
+}
+@supports not (-webkit-touch-callout: none){
+  body{ --font:'Segoe UI','Helvetica Neue',Arial,sans-serif; }
+}
+
+/* TABS */
+.app-wrap{max-width:430px;margin:0 auto;position:relative;}
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:calc(49px + var(--sab));background:rgba(249,249,249,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--sep);display:flex;align-items:flex-start;padding-top:8px;z-index:100;}
+@media(prefers-color-scheme:dark){.tabs{background:rgba(28,28,30,0.94);}}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:var(--lbl3);font-weight:500;}
+.tab.on{color:var(--blue);}
+.tab-ico{font-size:22px;line-height:1;}
+
+/* PAGES */
+.pg{display:none;flex-direction:column;min-height:100dvh;min-height:100vh;}
+.pg.on{display:flex;}
+
+/* NAV */
+.nav{background:var(--card);border-bottom:.5px solid var(--sep);padding-top:var(--sat);position:sticky;top:0;z-index:50;max-width:430px;margin:0 auto;}
+.nav-top{display:flex;align-items:center;justify-content:space-between;padding:0 16px;min-height:44px;}
+.nav-title{font-size:17px;font-weight:600;}
+.nav-big{font-size:clamp(24px,5vw,34px);font-weight:700;letter-spacing:-.5px;padding:4px 16px 10px;}
+.ico-btn{width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;border:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:300;}
+.ico-btn.gray{background:var(--sep);color:var(--lbl);font-size:15px;}
+
+/* SCROLL */
+.scrl{flex:1;overflow-y:auto;padding:12px 0 calc(var(--sab) + 70px);-webkit-overflow-scrolling:touch;}
+
+/* FAB — floating add button */
+.fab{
+  position:fixed;
+  bottom:calc(var(--sab) + 60px);
+  right:max(20px, calc(50% - 195px));
+  width:56px;height:56px;
+  border-radius:50%;
+  background:var(--blue);
+  color:#fff;border:none;
+  font-size:30px;font-weight:300;
+  box-shadow:0 4px 16px rgba(0,122,255,.45);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  z-index:90;
+  transition:transform .15s,opacity .15s;
+}
+.fab:active{transform:scale(.92);opacity:.85;}
+
+/* SECTION HEADER — collapsible */
+.shdr{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--lbl2);padding:0 20px 0 32px;margin:20px 0 6px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+}
+.shdr:first-child{margin-top:4px;}
+.shdr-left{display:flex;align-items:center;gap:6px;}
+.shdr-arrow{font-size:10px;color:var(--lbl3);transition:transform .25s;display:inline-block;}
+.shdr-arrow.open{transform:rotate(90deg);}
+.cat-section.collapsed .card{display:none;}
+.cat-section.collapsed .shdr-arrow{transform:rotate(0deg)!important;}
+
+/* LIST */
+.card{background:var(--card);border-radius:12px;margin:0 16px 4px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+
+/* ROW */
+.row{display:flex;align-items:center;padding:0 16px;min-height:54px;position:relative;overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;width:100%;background:transparent;border:none;font-family:var(--font);text-align:left;color:var(--lbl);}
+.row+.row::before{content:'';position:absolute;top:0;left:56px;right:0;height:.5px;background:var(--sep);}
+.row:active{background:rgba(0,0,0,0.04);}
+@media(prefers-color-scheme:dark){.row:active{background:rgba(255,255,255,0.04);}}
+.row-ico{font-size:20px;margin-right:12px;flex-shrink:0;width:28px;text-align:center;}
+.row-lbl{flex:1;font-size:17px;}
+.row-sub{font-size:13px;color:var(--lbl3);margin-right:6px;}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-left:8px;}
+
+/* CHECK */
+.chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--sep);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:14px;font-size:13px;color:#fff;font-weight:700;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
+.chk.on{background:var(--green);border-color:var(--green);}
+
+/* SWIPE */
+.sw-wrap{display:flex;align-items:center;flex:1;overflow:hidden;transition:transform .25s ease;}
+.row.sw .sw-wrap{transform:translateX(-240px);}
+.sw-del,.sw-mov,.sw-edt{position:absolute;top:0;bottom:0;color:#fff;border:none;font-family:var(--font);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap;padding:0 18px;transition:transform .25s ease;}
+.sw-del{right:0;background:var(--red);transform:translateX(100%);}
+.sw-mov{right:80px;background:var(--orange);transform:translateX(200%);}
+.sw-edt{right:160px;background:var(--blue);transform:translateX(300%);}
+.row.sw .sw-del,.row.sw .sw-mov,.row.sw .sw-edt{transform:translateX(0);}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;text-align:center;gap:10px;}
+.empty-ico{font-size:52px;}
+.empty-ttl{font-size:20px;font-weight:600;color:var(--lbl2);}
+.empty-sub{font-size:15px;color:var(--lbl3);line-height:1.5;}
+
+/* PROGRESS */
+.prog{display:flex;align-items:center;gap:10px;padding:8px 20px 4px;}
+.prog-tr{flex:1;height:4px;background:var(--sep);border-radius:99px;overflow:hidden;}
+.prog-fl{height:100%;background:var(--green);border-radius:99px;transition:width .4s;}
+.prog-lb{font-size:13px;color:var(--lbl3);min-width:36px;text-align:right;}
+
+/* MODAL */
+.ov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .3s;}
+.ov.on{opacity:1;pointer-events:all;}
+.sheet{width:100%;background:var(--bg);border-radius:12px 12px 0 0;padding-bottom:var(--sab);transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:88dvh;overflow-y:auto;}
+.ov.on .sheet{transform:translateY(0);}
+.handle{width:36px;height:4px;background:var(--sep);border-radius:2px;margin:10px auto 0;}
+.mtitle{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--lbl3);text-align:center;padding:12px 16px 6px;}
+.minput-wrap{background:var(--card);border-radius:12px;margin:0 16px 10px;overflow:hidden;}
+.minput{width:100%;border:none;outline:none;font-family:var(--font);font-size:17px;padding:14px 16px;background:transparent;color:var(--lbl);}
+.minput::placeholder{color:var(--lbl3);}
+.mbtn{display:block;width:calc(100% - 32px);margin:0 16px 10px;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--font);font-size:17px;font-weight:600;padding:15px;cursor:pointer;}
+.mbtn.red{background:var(--red);}
+.mbtn.gray{background:var(--sep);color:var(--lbl);}
+
+/* CAT GRID */
+.cgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 16px 10px;}
+.copt{background:var(--card);border:2px solid transparent;border-radius:12px;padding:11px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:var(--font);font-size:14px;font-weight:500;color:var(--lbl);text-align:left;}
+.copt.on{border-color:var(--cc);background:color-mix(in srgb,var(--cc) 12%,var(--card));}
+
+/* COLOR PICKER */
+.cpick{display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 12px;}
+.cswatch{width:32px;height:32px;border-radius:50%;border:3px solid transparent;cursor:pointer;}
+.cswatch.on{outline:2px solid var(--sc);outline-offset:2px;border-color:#fff;}
+
+/* SELECT ROW in pick modal */
+.selrow{display:flex;align-items:center;width:100%;min-height:52px;padding:0 16px;background:transparent;border:none;font-family:var(--font);text-align:left;color:var(--lbl);cursor:pointer;position:relative;}
+.selrow+.selrow::before{content:'';position:absolute;top:0;left:52px;right:0;height:.5px;background:var(--sep);}
+.selrow:active{background:rgba(0,0,0,.05);}
+.selchk{width:24px;height:24px;border-radius:50%;border:2px solid var(--sep);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:12px;font-size:12px;color:#fff;font-weight:700;transition:all .2s;}
+.selchk.on{background:var(--blue);border-color:var(--blue);}
+
+/* SHARE MODAL */
+.share-actions{display:flex;flex-direction:column;gap:0;margin:0 16px 10px;border-radius:14px;overflow:hidden;}
+.share-btn{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);border:none;font-family:var(--font);font-size:17px;color:var(--lbl);cursor:pointer;width:100%;text-align:left;}
+.share-btn+.share-btn{border-top:.5px solid var(--sep);}
+.share-btn:active{background:rgba(0,0,0,.04);}
+.share-ico{font-size:22px;width:32px;text-align:center;}
+
+@media print{
+  .tabs,.nav,.ov,.fab{display:none!important;}
+  .pg{display:block!important;}
+  #pg-lib,#pg-cfg{display:none!important;}
+  .scrl{padding:0;overflow:visible;}
+  .sw-del,.sw-mov,.sw-edt{display:none;}
+  .card{border:1px solid #ddd;margin:0 0 10px;border-radius:0;}
+  .cat-section.collapsed .card{display:block!important;}
+}
+</style>
+</head>
+<body>
+<div class="app-wrap" style="min-height:100dvh;min-height:100vh;background:var(--bg)">
+
+<!-- PAGE: LISTA -->
+<div class="pg on" id="pg-list">
+  <div class="nav">
+    <div class="nav-top">
+      <div style="width:32px"></div>
+      <span class="nav-title">Lista de Compras</span>
+      <button class="ico-btn gray" onclick="openOv('ov-share')" title="Partilhar / Imprimir">⋯</button>
+    </div>
+    <div class="nav-big">🛒 Hoje</div>
+  </div>
+  <div class="scrl" id="list-body"></div>
+  <button class="fab" onclick="openPickModal()" title="Adicionar itens">+</button>
+</div>
+
+<!-- PAGE: BIBLIOTECA -->
+<div class="pg" id="pg-lib">
+  <div class="nav">
+    <div class="nav-top">
+      <div style="width:32px"></div>
+      <span class="nav-title">Biblioteca</span>
+      <button class="ico-btn" onclick="openNewItemModal()">+</button>
+    </div>
+    <div class="nav-big">📚 Itens</div>
+  </div>
+  <div class="scrl" id="lib-body"></div>
+</div>
+
+<!-- PAGE: GERIR -->
+<div class="pg" id="pg-cfg">
+  <div class="nav">
+    <div class="nav-top">
+      <div style="width:32px"></div>
+      <span class="nav-title">Categorias</span>
+      <button class="ico-btn" onclick="openNewCatModal()">+</button>
+    </div>
+    <div class="nav-big">⚙️ Gerir</div>
+  </div>
+  <div class="scrl" id="cfg-body"></div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tabs">
+  <div class="tab on" id="tab-list" onclick="goTab('list')"><div class="tab-ico">🛒</div><div>Lista</div></div>
+  <div class="tab" id="tab-lib" onclick="goTab('lib')"><div class="tab-ico">📚</div><div>Biblioteca</div></div>
+  <div class="tab" id="tab-cfg" onclick="goTab('cfg')"><div class="tab-ico">⚙️</div><div>Gerir</div></div>
+</div>
+
+<!-- MODAL: SHARE -->
+<div class="ov" id="ov-share">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Opções</div>
+    <div class="share-actions">
+      <button class="share-btn" onclick="doShare()"><span class="share-ico">↑</span>Partilhar lista</button>
+      <button class="share-btn" onclick="doPrint()"><span class="share-ico">🖨️</span>Imprimir lista</button>
+      <button class="share-btn" onclick="showInstallHelp()"><span class="share-ico">📱</span>Instalar no iPhone</button>
+    </div>
+    <button class="mbtn gray" onclick="closeOv('ov-share')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: INSTALL HELP -->
+<div class="ov" id="ov-install">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Instalar no iPhone</div>
+    <div style="padding:8px 20px 16px;font-size:16px;line-height:1.7;color:var(--lbl2)">
+      <p style="margin-bottom:12px">Para colocar esta lista no ecrã inicial como um app:</p>
+      <p>1️⃣  Abre este ficheiro no <strong style="color:var(--lbl)">Safari</strong></p>
+      <p>2️⃣  Toca no botão <strong style="color:var(--lbl)">Partilhar ↑</strong> (centro, em baixo)</p>
+      <p>3️⃣  Escolhe <strong style="color:var(--lbl)">"Adicionar ao Ecrã Inicial"</strong></p>
+      <p>4️⃣  Dá o nome <strong style="color:var(--lbl)">Compras</strong> e toca em <strong style="color:var(--lbl)">Adicionar</strong></p>
+      <p style="margin-top:12px">✅ Fica com o ícone 🛒 no ecrã inicial, abre sem barra do Safari.</p>
+    </div>
+    <button class="mbtn gray" onclick="closeOv('ov-install')">Fechar</button>
+  </div>
+</div>
+
+<!-- MODAL: PICK ITEMS -->
+<div class="ov" id="ov-pick">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Adicionar à Lista</div>
+    <div id="pick-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: NEW LIB ITEM -->
+<div class="ov" id="ov-newitem">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Novo Item na Biblioteca</div>
+    <div class="minput-wrap"><input class="minput" id="ni-name" placeholder="Nome do item..." autocomplete="off" autocorrect="off"></div>
+    <div class="mtitle">Categoria</div>
+    <div class="cgrid" id="ni-catgrid"></div>
+    <button class="mbtn" onclick="saveNewItem()">Adicionar</button>
+    <button class="mbtn gray" onclick="closeOv('ov-newitem')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: EDIT LIB ITEM -->
+<div class="ov" id="ov-edititem">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Editar Item</div>
+    <div class="minput-wrap"><input class="minput" id="ei-name" placeholder="Nome..." autocomplete="off" autocorrect="off"></div>
+    <button class="mbtn" onclick="saveEditItem()">Guardar</button>
+    <button class="mbtn gray" onclick="closeOv('ov-edititem')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: RECAT -->
+<div class="ov" id="ov-recat">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Mover para...</div>
+    <div class="cgrid" id="recat-grid"></div>
+    <button class="mbtn gray" onclick="closeOv('ov-recat')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: NEW CAT -->
+<div class="ov" id="ov-newcat">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Nova Categoria</div>
+    <div class="minput-wrap"><input class="minput" id="nc-name" placeholder="Nome..." autocomplete="off"></div>
+    <div class="mtitle">Emoji</div>
+    <div class="minput-wrap"><input class="minput" id="nc-icon" placeholder="Ex: 🥗" maxlength="4" autocomplete="off"></div>
+    <div class="mtitle">Cor</div>
+    <div class="cpick" id="nc-colors"></div>
+    <button class="mbtn" onclick="saveNewCat()">Criar</button>
+    <button class="mbtn gray" onclick="closeOv('ov-newcat')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: EDIT CAT -->
+<div class="ov" id="ov-editcat">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Editar Categoria</div>
+    <div class="minput-wrap"><input class="minput" id="ec-name" placeholder="Nome..." autocomplete="off"></div>
+    <div class="mtitle">Emoji</div>
+    <div class="minput-wrap"><input class="minput" id="ec-icon" placeholder="Ex: 🥗" maxlength="4" autocomplete="off"></div>
+    <button class="mbtn" onclick="saveEditCat()">Guardar</button>
+    <button class="mbtn gray" onclick="closeOv('ov-editcat')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: DELETE CAT -->
+<div class="ov" id="ov-delcat">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle">Apagar Categoria</div>
+    <div id="delcat-msg" style="padding:12px 16px 4px;font-size:15px;color:var(--lbl2);text-align:center"></div>
+    <button class="mbtn red" onclick="confirmDelCat()">Apagar e mover itens para "Outros"</button>
+    <button class="mbtn gray" onclick="closeOv('ov-delcat')">Cancelar</button>
+  </div>
+</div>
+
+<script>
+const COLORS=["#FF3B30","#FF9500","#FFCC00","#34C759","#5AC8FA","#007AFF","#AF52DE","#FF2D55","#8E8E93","#A2845E"];
+const DEF_CATS=[
+  {id:"frutas",label:"Frutas & Verduras",icon:"🍎",color:"#34C759"},
+  {id:"carnes",label:"Carnes & Peixe",icon:"🥩",color:"#FF3B30"},
+  {id:"laticinios",label:"Laticínios & Ovos",icon:"🧀",color:"#FFCC00"},
+  {id:"padaria",label:"Padaria & Cereais",icon:"🍞",color:"#FF9500"},
+  {id:"bebidas",label:"Bebidas",icon:"🧃",color:"#007AFF"},
+  {id:"limpeza",label:"Limpeza & Higiene",icon:"🧹",color:"#AF52DE"},
+  {id:"congelados",label:"Congelados",icon:"🧊",color:"#5AC8FA"},
+  {id:"outros",label:"Outros",icon:"🛍️",color:"#8E8E93"},
+];
+const DEF_ITEMS=[
+  {id:"f1",name:"Maçãs",cat:"frutas"},{id:"f2",name:"Bananas",cat:"frutas"},{id:"f3",name:"Laranjas",cat:"frutas"},
+  {id:"f4",name:"Morangos",cat:"frutas"},{id:"f5",name:"Uvas",cat:"frutas"},{id:"f6",name:"Peras",cat:"frutas"},
+  {id:"f7",name:"Tomates",cat:"frutas"},{id:"f8",name:"Alface",cat:"frutas"},{id:"f9",name:"Cenouras",cat:"frutas"},
+  {id:"f10",name:"Batatas",cat:"frutas"},{id:"f11",name:"Cebolas",cat:"frutas"},{id:"f12",name:"Alho",cat:"frutas"},
+  {id:"f13",name:"Brócolos",cat:"frutas"},{id:"f14",name:"Espinafres",cat:"frutas"},{id:"f15",name:"Pepino",cat:"frutas"},
+  {id:"f16",name:"Pimento",cat:"frutas"},
+  {id:"c1",name:"Frango inteiro",cat:"carnes"},{id:"c2",name:"Peito de frango",cat:"carnes"},
+  {id:"c3",name:"Carne picada",cat:"carnes"},{id:"c4",name:"Bifes de vaca",cat:"carnes"},
+  {id:"c5",name:"Costeletas de porco",cat:"carnes"},{id:"c6",name:"Salmão",cat:"carnes"},
+  {id:"c7",name:"Pescada",cat:"carnes"},{id:"c8",name:"Bacalhau",cat:"carnes"},
+  {id:"c9",name:"Atum (lata)",cat:"carnes"},{id:"c10",name:"Sardinhas",cat:"carnes"},
+  {id:"c11",name:"Linguiça",cat:"carnes"},{id:"c12",name:"Fiambre",cat:"carnes"},
+  {id:"l1",name:"Leite",cat:"laticinios"},{id:"l2",name:"Ovos",cat:"laticinios"},
+  {id:"l3",name:"Manteiga",cat:"laticinios"},{id:"l4",name:"Queijo flamengo",cat:"laticinios"},
+  {id:"l5",name:"Queijo parmesão",cat:"laticinios"},{id:"l6",name:"Iogurte natural",cat:"laticinios"},
+  {id:"l7",name:"Iogurte de fruta",cat:"laticinios"},{id:"l8",name:"Natas",cat:"laticinios"},
+  {id:"l9",name:"Requeijão",cat:"laticinios"},{id:"l10",name:"Mozzarella",cat:"laticinios"},
+  {id:"p1",name:"Pão de forma",cat:"padaria"},{id:"p2",name:"Baguete",cat:"padaria"},
+  {id:"p3",name:"Pão de mistura",cat:"padaria"},{id:"p4",name:"Croissants",cat:"padaria"},
+  {id:"p5",name:"Arroz",cat:"padaria"},{id:"p6",name:"Massa esparguete",cat:"padaria"},
+  {id:"p7",name:"Massa penne",cat:"padaria"},{id:"p8",name:"Farinha",cat:"padaria"},
+  {id:"p9",name:"Açúcar",cat:"padaria"},{id:"p10",name:"Sal",cat:"padaria"},
+  {id:"p11",name:"Azeite",cat:"padaria"},{id:"p12",name:"Óleo",cat:"padaria"},
+  {id:"p13",name:"Bolachas",cat:"padaria"},{id:"p14",name:"Cereais",cat:"padaria"},
+  {id:"b1",name:"Água (6x1.5L)",cat:"bebidas"},{id:"b2",name:"Sumo de laranja",cat:"bebidas"},
+  {id:"b3",name:"Coca-Cola",cat:"bebidas"},{id:"b4",name:"Café",cat:"bebidas"},
+  {id:"b5",name:"Chá",cat:"bebidas"},{id:"b6",name:"Leite vegetal",cat:"bebidas"},
+  {id:"b7",name:"Cerveja",cat:"bebidas"},{id:"b8",name:"Vinho tinto",cat:"bebidas"},
+  {id:"b9",name:"Vinho branco",cat:"bebidas"},{id:"b10",name:"Água com gás",cat:"bebidas"},
+  {id:"lm1",name:"Detergente louça",cat:"limpeza"},{id:"lm2",name:"Detergente máquina",cat:"limpeza"},
+  {id:"lm3",name:"Amaciador",cat:"limpeza"},{id:"lm4",name:"Limpador multiusos",cat:"limpeza"},
+  {id:"lm5",name:"Papel higiénico",cat:"limpeza"},{id:"lm6",name:"Guardanapos",cat:"limpeza"},
+  {id:"lm7",name:"Sacos do lixo",cat:"limpeza"},{id:"lm8",name:"Esponjas",cat:"limpeza"},
+  {id:"lm9",name:"Shampoo",cat:"limpeza"},{id:"lm10",name:"Gel de banhe",cat:"limpeza"},
+  {id:"lm11",name:"Pasta de dentes",cat:"limpeza"},{id:"lm12",name:"Desodorizante",cat:"limpeza"},
+  {id:"cn1",name:"Ervilhas",cat:"congelados"},{id:"cn2",name:"Milho",cat:"congelados"},
+  {id:"cn3",name:"Batatas fritas (cong.)",cat:"congelados"},{id:"cn4",name:"Pizza",cat:"congelados"},
+  {id:"cn5",name:"Peixe panado",cat:"congelados"},{id:"cn6",name:"Gelado",cat:"congelados"},
+];
+
+let cats     = JSON.parse(localStorage.getItem("gv3_cats")||"null")||DEF_CATS.map(c=>({...c}));
+let libItems = JSON.parse(localStorage.getItem("gv3_lib") ||"null")||DEF_ITEMS.map(i=>({...i}));
+let listItems= JSON.parse(localStorage.getItem("gv3_list")||"[]");
+let collapsed= JSON.parse(localStorage.getItem("gv3_col") ||"{}");
+
+let pickedIds=new Set();
+let niCat=cats[0].id;
+let ncColor=COLORS[5];
+let editItemId=null,editCatId=null,delCatId=null;
+let recatId=null,recatCtx="lib";
+let swRow=null,txStart=0;
+
+function save(){
+  localStorage.setItem("gv3_cats",JSON.stringify(cats));
+  localStorage.setItem("gv3_lib", JSON.stringify(libItems));
+  localStorage.setItem("gv3_list",JSON.stringify(listItems));
+  localStorage.setItem("gv3_col", JSON.stringify(collapsed));
+}
+function catOf(id){return cats.find(c=>c.id===id)||{id:"outros",label:"Outros",icon:"🛍️",color:"#8E8E93"};}
+function uid(){return "x"+Date.now().toString(36)+Math.random().toString(36).slice(2);}
+
+// ── TABS ─────────────────────────────────────────
+function goTab(t){
+  document.querySelectorAll(".pg").forEach(p=>p.classList.remove("on"));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("on"));
+  document.getElementById("pg-"+t).classList.add("on");
+  document.getElementById("tab-"+t).classList.add("on");
+  closeSwipe();
+  if(t==="list") drawList();
+  if(t==="lib")  drawLib();
+  if(t==="cfg")  drawCfg();
+}
+
+// ── OVERLAYS ─────────────────────────────────────
+function openOv(id){document.getElementById(id).classList.add("on");}
+function closeOv(id){document.getElementById(id).classList.remove("on");}
+document.querySelectorAll(".ov").forEach(o=>{
+  o.addEventListener("click",e=>{if(e.target===o) o.classList.remove("on");});
+});
+
+// ── SHARE / PRINT / INSTALL ──────────────────────
+function doShare(){
+  const lines=["🛒 Lista de Compras\n"];
+  cats.forEach(cat=>{
+    const its=listItems.filter(i=>i.cat===cat.id);
+    if(!its.length) return;
+    lines.push(`\n${cat.icon} ${cat.label}`);
+    its.forEach(i=>lines.push(`  • ${i.name}`));
+  });
+  const txt=lines.join("\n");
+  closeOv("ov-share");
+  if(navigator.share) navigator.share({title:"Lista de Compras",text:txt});
+  else navigator.clipboard?.writeText(txt).then(()=>alert("Lista copiada para a área de transferência!")).catch(()=>prompt("Copia a lista:",txt));
+}
+function doPrint(){closeOv("ov-share");setTimeout(()=>window.print(),300);}
+function showInstallHelp(){closeOv("ov-share");setTimeout(()=>openOv("ov-install"),350);}
+
+// ── LIST PAGE ────────────────────────────────────
+function drawList(){
+  const el=document.getElementById("list-body");
+  el.innerHTML="";
+  if(!listItems.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">🛒</div><div class="empty-ttl">Lista vazia</div><div class="empty-sub">Toca em <strong>+</strong> para escolher itens.</div></div>`;
+    return;
+  }
+  // progress
+  const p=document.createElement("div"); p.className="prog";
+  p.innerHTML=`<div class="prog-tr"><div class="prog-fl" style="width:0"></div></div><div class="prog-lb">0/${listItems.length}</div>`;
+  el.appendChild(p);
+
+  cats.forEach(cat=>{
+    const its=listItems.filter(i=>i.cat===cat.id);
+    if(!its.length) return;
+    const isCollapsed = ("list_"+cat.id in collapsed) ? !!collapsed["list_"+cat.id] : true;
+
+    const section=document.createElement("div");
+    section.className="cat-section"+(isCollapsed?" collapsed":"");
+
+    const h=document.createElement("div"); h.className="shdr";
+    h.innerHTML=`<div class="shdr-left"><span style="color:${cat.color}">${cat.icon} ${cat.label}</span><span style="font-size:11px;background:${cat.color}22;color:${cat.color};padding:1px 7px;border-radius:99px;margin-left:4px">${its.length}</span></div><span class="shdr-arrow ${isCollapsed?"":"open"}">›</span>`;
+    h.onclick=()=>{
+      const col=section.classList.toggle("collapsed");
+      collapsed["list_"+cat.id]=col;
+      save();
+      h.querySelector(".shdr-arrow").classList.toggle("open",!col);
+    };
+
+    const card=document.createElement("div"); card.className="card";
+    its.forEach(item=>card.appendChild(makeListRow(item)));
+    section.appendChild(h); section.appendChild(card);
+    el.appendChild(section);
+  });
+}
+
+function makeListRow(item){
+  const cat=catOf(item.cat);
+  const row=document.createElement("button"); row.className="row";
+  const wrap=document.createElement("div"); wrap.className="sw-wrap";
+  wrap.innerHTML=`<div class="chk"></div><span class="row-lbl">${item.name}</span><div class="dot" style="background:${cat.color}"></div>`;
+  row.appendChild(wrap);
+  const bDel=document.createElement("button"); bDel.className="sw-del"; bDel.textContent="Remover";
+  bDel.onclick=e=>{e.stopPropagation();listItems=listItems.filter(i=>i.id!==item.id);save();closeSwipe();drawList();};
+  const bMov=document.createElement("button"); bMov.className="sw-mov"; bMov.textContent="Mover";
+  bMov.onclick=e=>{e.stopPropagation();openRecat(item.id,"list");};
+  row.appendChild(bDel); row.appendChild(bMov);
+  row.onclick=e=>{
+    if(e.target===bDel||e.target===bMov) return;
+    if(row.classList.contains("sw")){closeSwipe();return;}
+    listItems=listItems.filter(i=>i.id!==item.id);
+    save(); drawList();
+  };
+  setupSwipe(row);
+  return row;
+}
+
+// ── PICK MODAL ───────────────────────────────────
+function openPickModal(){
+  pickedIds=new Set();
+  const body=document.getElementById("pick-body");
+  body.innerHTML="";
+
+  cats.forEach(cat=>{
+    const its=libItems.filter(i=>i.cat===cat.id);
+    if(!its.length) return;
+    const isPickCol = ("pick_"+cat.id in collapsed) ? !!collapsed["pick_"+cat.id] : true;
+    const psec = document.createElement("div"); psec.className="cat-section"+(isPickCol?" collapsed":"");
+    const h=document.createElement("div"); h.className="shdr"; h.style.color=cat.color;
+    h.innerHTML=`<div class="shdr-left"><span style="color:${cat.color}">${cat.icon} ${cat.label}</span><span style="font-size:11px;background:${cat.color}22;color:${cat.color};padding:1px 7px;border-radius:99px;margin-left:4px">${its.length}</span></div><span class="shdr-arrow ${isPickCol?"":"open"}">›</span>`;
+    h.onclick=()=>{
+      const col=psec.classList.toggle("collapsed");
+      collapsed["pick_"+cat.id]=col;
+      h.querySelector(".shdr-arrow").classList.toggle("open",!col);
+    };
+    body.appendChild(h);
+    const card=document.createElement("div"); card.className="card";
+    its.forEach(item=>{
+      const inList=listItems.some(l=>l.name===item.name&&l.cat===item.cat);
+      const btn=document.createElement("button"); btn.className="selrow";
+      btn.innerHTML=`<div class="selchk${inList?" on":""}" id="sc-${item.id}">${inList?"✓":""}</div><span style="font-size:17px;flex:1">${item.name}</span>${inList?"<span style='font-size:12px;color:var(--lbl3)'>na lista</span>":""}`;
+      if(!inList){
+        btn.onclick=()=>{
+          if(pickedIds.has(item.id)){pickedIds.delete(item.id);}
+          else{pickedIds.add(item.id);}
+          const chk=document.getElementById("sc-"+item.id);
+          if(chk){const on=pickedIds.has(item.id);chk.classList.toggle("on",on);chk.textContent=on?"✓":"";}
+          const ab=document.getElementById("pick-add-btn");
+          if(ab) ab.textContent=pickedIds.size?`Adicionar ${pickedIds.size} item${pickedIds.size>1?"s":""}`:"Adicionar à Lista";
+        };
+      } else {btn.disabled=true;btn.style.opacity=".45";}
+      card.appendChild(btn);
+    });
+    psec.appendChild(card);
+    body.appendChild(psec);
+  });
+
+  const ab=document.createElement("button"); ab.className="mbtn"; ab.id="pick-add-btn"; ab.textContent="Adicionar à Lista";
+  ab.onclick=doAddToList;
+  body.appendChild(ab);
+  const cb=document.createElement("button"); cb.className="mbtn gray"; cb.textContent="Cancelar";
+  cb.onclick=()=>closeOv("ov-pick");
+  body.appendChild(cb);
+  openOv("ov-pick");
+}
+
+function doAddToList(){
+  let n=0;
+  pickedIds.forEach(id=>{
+    const item=libItems.find(i=>i.id===id);
+    if(item&&!listItems.some(l=>l.name===item.name&&l.cat===item.cat)){
+      listItems.push({id:uid(),name:item.name,cat:item.cat});
+      n++;
+    }
+  });
+  save();
+  closeOv("ov-pick");
+  if(n>0) goTab("list");
+}
+
+// ── LIBRARY ──────────────────────────────────────
+function drawLib(){
+  const el=document.getElementById("lib-body"); el.innerHTML="";
+  cats.forEach(cat=>{
+    const its=libItems.filter(i=>i.cat===cat.id);
+    const isCollapsed = ("lib_"+cat.id in collapsed) ? !!collapsed["lib_"+cat.id] : true;
+    const section=document.createElement("div"); section.className="cat-section"+(isCollapsed?" collapsed":"");
+    const h=document.createElement("div"); h.className="shdr";
+    h.innerHTML=`<div class="shdr-left"><span style="color:${cat.color}">${cat.icon} ${cat.label}</span><span style="font-size:11px;background:${cat.color}22;color:${cat.color};padding:1px 7px;border-radius:99px;margin-left:4px">${its.length}</span></div><span class="shdr-arrow ${isCollapsed?"":"open"}">›</span>`;
+    h.onclick=()=>{
+      const col=section.classList.toggle("collapsed");
+      collapsed["lib_"+cat.id]=col;
+      save();
+      h.querySelector(".shdr-arrow").classList.toggle("open",!col);
+    };
+    const card=document.createElement("div"); card.className="card";
+    if(!its.length){const e=document.createElement("div");e.style.cssText="padding:12px 16px;font-size:15px;color:var(--lbl3)";e.textContent="Sem itens.";card.appendChild(e);}
+    else its.forEach(item=>card.appendChild(makeLibRow(item)));
+    section.appendChild(h); section.appendChild(card);
+    el.appendChild(section);
+  });
+}
+
+function makeLibRow(item){
+  const cat=catOf(item.cat);
+  const row=document.createElement("button"); row.className="row";
+  const wrap=document.createElement("div"); wrap.className="sw-wrap";
+  wrap.innerHTML=`<div class="row-ico">${cat.icon}</div><span class="row-lbl">${item.name}</span>`;
+  row.appendChild(wrap);
+  const bEdt=document.createElement("button"); bEdt.className="sw-edt"; bEdt.textContent="Editar";
+  bEdt.onclick=e=>{e.stopPropagation();openEditItem(item.id);};
+  const bMov=document.createElement("button"); bMov.className="sw-mov"; bMov.textContent="Mover";
+  bMov.onclick=e=>{e.stopPropagation();openRecat(item.id,"lib");};
+  const bDel=document.createElement("button"); bDel.className="sw-del"; bDel.textContent="Apagar";
+  bDel.onclick=e=>{e.stopPropagation();libItems=libItems.filter(i=>i.id!==item.id);save();closeSwipe();drawLib();};
+  row.appendChild(bEdt); row.appendChild(bMov); row.appendChild(bDel);
+  row.onclick=e=>{if([bEdt,bMov,bDel].includes(e.target)) return; if(row.classList.contains("sw")){closeSwipe();return;}};
+  setupSwipe(row);
+  return row;
+}
+
+// ── NEW / EDIT ITEM ──────────────────────────────
+function openNewItemModal(){
+  document.getElementById("ni-name").value=""; niCat=cats[0].id;
+  buildCatGrid("ni-catgrid",niCat,id=>{niCat=id;});
+  openOv("ov-newitem"); setTimeout(()=>document.getElementById("ni-name").focus(),350);
+}
+document.getElementById("ni-name").addEventListener("keydown",e=>{if(e.key==="Enter")saveNewItem();});
+function saveNewItem(){
+  const n=document.getElementById("ni-name").value.trim(); if(!n) return;
+  libItems.push({id:uid(),name:n,cat:niCat});
+  save(); closeOv("ov-newitem"); drawLib();
+}
+function openEditItem(id){
+  editItemId=id; const item=libItems.find(i=>i.id===id); if(!item) return;
+  document.getElementById("ei-name").value=item.name;
+  closeSwipe(); openOv("ov-edititem"); setTimeout(()=>document.getElementById("ei-name").focus(),350);
+}
+document.getElementById("ei-name").addEventListener("keydown",e=>{if(e.key==="Enter")saveEditItem();});
+function saveEditItem(){
+  const n=document.getElementById("ei-name").value.trim(); if(!n||!editItemId) return;
+  const item=libItems.find(i=>i.id===editItemId); if(item) item.name=n;
+  save(); closeOv("ov-edititem"); drawLib();
+}
+
+// ── RECAT ────────────────────────────────────────
+function openRecat(id,ctx){
+  recatId=id; recatCtx=ctx;
+  const cur=ctx==="lib"?libItems.find(i=>i.id===id)?.cat:listItems.find(i=>i.id===id)?.cat;
+  const grid=document.getElementById("recat-grid"); grid.innerHTML="";
+  cats.forEach(cat=>{
+    const btn=document.createElement("button"); btn.className="copt"+(cat.id===cur?" on":"");
+    btn.style.setProperty("--cc",cat.color);
+    btn.innerHTML=`<span style="font-size:20px">${cat.icon}</span><span>${cat.label}</span>`;
+    btn.onclick=()=>{
+      if(recatCtx==="lib"){const i=libItems.find(x=>x.id===recatId);if(i)i.cat=cat.id;}
+      else{const i=listItems.find(x=>x.id===recatId);if(i)i.cat=cat.id;}
+      save(); closeOv("ov-recat"); closeSwipe();
+      if(recatCtx==="lib") drawLib(); else drawList();
+    };
+    grid.appendChild(btn);
+  });
+  closeSwipe(); openOv("ov-recat");
+}
+
+// ── CFG ──────────────────────────────────────────
+function drawCfg(){
+  const el=document.getElementById("cfg-body"); el.innerHTML="";
+  const h=document.createElement("div"); h.className="shdr"; h.style.cursor="default"; h.innerHTML=`<div class="shdr-left">Categorias</div>`; el.appendChild(h);
+  const card=document.createElement("div"); card.className="card";
+  cats.forEach(cat=>{
+    const n=libItems.filter(i=>i.cat===cat.id).length;
+    const row=document.createElement("div"); row.className="row"; row.style.cursor="default";
+    row.innerHTML=`<div class="row-ico">${cat.icon}</div><span class="row-lbl">${cat.label}</span><span class="row-sub" style="color:${cat.color}">${n} itens</span>
+      <button onclick="openEditCat('${cat.id}')" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:4px 11px;font-family:var(--font);font-size:13px;cursor:pointer;margin-left:4px">Editar</button>
+      ${cat.id!=="outros"?`<button onclick="openDelCat('${cat.id}')" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:4px 11px;font-family:var(--font);font-size:13px;cursor:pointer;margin-left:4px">Apagar</button>`:""}`;
+    card.appendChild(row);
+  });
+  el.appendChild(card);
+  const h2=document.createElement("div"); h2.className="shdr"; h2.style.cssText="cursor:default;margin-top:24px"; h2.innerHTML=`<div class="shdr-left">Ações</div>`; el.appendChild(h2);
+  const card2=document.createElement("div"); card2.className="card";
+  const clr=document.createElement("button"); clr.className="row";
+  clr.innerHTML=`<div class="row-ico">🗑️</div><span class="row-lbl" style="color:var(--red)">Limpar lista de compras</span>`;
+  clr.onclick=()=>{if(confirm("Apagar toda a lista de compras?")){ listItems=[]; save(); drawList(); goTab("list"); }};
+  card2.appendChild(clr); el.appendChild(card2);
+}
+
+function openNewCatModal(){
+  document.getElementById("nc-name").value=""; document.getElementById("nc-icon").value="";
+  ncColor=COLORS[5]; buildColorPicker("nc-colors");
+  openOv("ov-newcat"); setTimeout(()=>document.getElementById("nc-name").focus(),350);
+}
+function saveNewCat(){
+  const n=document.getElementById("nc-name").value.trim(); if(!n) return;
+  const ico=document.getElementById("nc-icon").value.trim()||"📁";
+  cats.push({id:uid(),label:n,icon:ico,color:ncColor});
+  save(); closeOv("ov-newcat"); drawCfg();
+}
+function openEditCat(id){
+  editCatId=id; const cat=catOf(id);
+  document.getElementById("ec-name").value=cat.label;
+  document.getElementById("ec-icon").value=cat.icon;
+  openOv("ov-editcat"); setTimeout(()=>document.getElementById("ec-name").focus(),350);
+}
+function saveEditCat(){
+  const n=document.getElementById("ec-name").value.trim(); if(!n||!editCatId) return;
+  const ico=document.getElementById("ec-icon").value.trim();
+  const cat=cats.find(c=>c.id===editCatId); if(cat){cat.label=n;if(ico)cat.icon=ico;}
+  save(); closeOv("ov-editcat"); drawCfg(); drawLib();
+}
+function openDelCat(id){
+  delCatId=id; const cat=catOf(id);
+  const n=libItems.filter(i=>i.cat===id).length;
+  document.getElementById("delcat-msg").textContent=`"${cat.label}" tem ${n} item${n!==1?"s":""}. ${n?"Serão movidos para Outros.":""}`;
+  openOv("ov-delcat");
+}
+function confirmDelCat(){
+  libItems=libItems.map(i=>i.cat===delCatId?{...i,cat:"outros"}:i);
+  listItems=listItems.map(i=>i.cat===delCatId?{...i,cat:"outros"}:i);
+  cats=cats.filter(c=>c.id!==delCatId);
+  save(); closeOv("ov-delcat"); drawCfg();
+}
+
+// ── CAT GRID ─────────────────────────────────────
+function buildCatGrid(containerId,selId,onChange){
+  const el=document.getElementById(containerId); el.innerHTML="";
+  cats.forEach(cat=>{
+    const btn=document.createElement("button"); btn.className="copt"+(cat.id===selId?" on":"");
+    btn.style.setProperty("--cc",cat.color);
+    btn.innerHTML=`<span style="font-size:20px">${cat.icon}</span><span>${cat.label}</span>`;
+    btn.onclick=()=>{el.querySelectorAll(".copt").forEach(b=>b.classList.remove("on"));btn.classList.add("on");onChange(cat.id);};
+    el.appendChild(btn);
+  });
+}
+
+// ── COLOR PICKER ─────────────────────────────────
+function buildColorPicker(containerId){
+  const el=document.getElementById(containerId); el.innerHTML="";
+  COLORS.forEach(c=>{
+    const s=document.createElement("button"); s.className="cswatch"+(c===ncColor?" on":"");
+    s.style.cssText=`background:${c};--sc:${c}`;
+    s.onclick=()=>{ncColor=c;buildColorPicker(containerId);};
+    el.appendChild(s);
+  });
+}
+
+// ── SWIPE ────────────────────────────────────────
+function setupSwipe(row){
+  row.addEventListener("touchstart",e=>{txStart=e.touches[0].clientX;},{passive:true});
+  row.addEventListener("touchend",e=>{
+    const dx=txStart-e.changedTouches[0].clientX;
+    if(dx>55){if(swRow&&swRow!==row)closeSwipe();row.classList.add("sw");swRow=row;}
+    else if(dx<-20){closeSwipe();}
+  },{passive:true});
+}
+function closeSwipe(){if(swRow){swRow.classList.remove("sw");swRow=null;}}
+document.addEventListener("touchstart",e=>{if(swRow&&!swRow.contains(e.target))closeSwipe();},{passive:true});
+
+// ── INIT ─────────────────────────────────────────
+drawList();
+</script>
+</div></body>
+</html>
